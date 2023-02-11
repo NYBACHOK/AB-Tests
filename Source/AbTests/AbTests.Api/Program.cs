@@ -1,6 +1,7 @@
 using AbTests.Api;
 using AbTests.Api.Acessors;
 using AbTests.Api.Extensions;
+using AbTests.Api.Helpers;
 using AbTests.Api.Managers;
 using Autofac;
 using Autofac.Extensions.DependencyInjection;
@@ -24,9 +25,14 @@ builder.Host.ConfigureContainer<ContainerBuilder>(_ =>
 {
     _.RegisterType<SqlAccessor>()
         .WithParameter(new NamedParameter("connectionString", EnvironmentVariables.DbConnectionString))
-        .AsSelf();
+        .AsSelf()
+        .AsImplementedInterfaces();
 
     _.RegisterType<ApiManager>().AsSelf();
+
+    _.RegisterType<RandomHelper>()
+        .AsSelf()
+        .AsImplementedInterfaces();
 });
 
 #endregion Container

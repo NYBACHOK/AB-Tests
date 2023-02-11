@@ -1,4 +1,5 @@
-﻿using AbTests.Api.DO;
+﻿using AbTests.Api.Acessors.Interfaces;
+using AbTests.Api.DO;
 using AbTests.Api.Helpers;
 using Dapper;
 using Dapper.Transaction;
@@ -6,7 +7,7 @@ using Npgsql;
 
 namespace AbTests.Api.Acessors;
 
-public class SqlAccessor
+public class SqlAccessor : ISqlAccessor
 {
     private readonly string _connectionString;
     

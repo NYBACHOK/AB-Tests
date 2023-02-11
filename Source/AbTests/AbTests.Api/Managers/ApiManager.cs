@@ -1,18 +1,22 @@
 ﻿using AbTests.Api.Acessors;
+using AbTests.Api.Acessors.Interfaces;
 using AbTests.Api.DO;
 using AbTests.Api.Dto;
 using AbTests.Api.Enums;
+using AbTests.Api.Helpers.Interfaces;
 using Npgsql;
 
 namespace AbTests.Api.Managers;
 
 public class ApiManager
 {
-    private readonly SqlAccessor _accessor;
+    private readonly ISqlAccessor _accessor;
+    private readonly IRandomHelper _random;
     
-    public ApiManager(SqlAccessor accessor)
+    public ApiManager(ISqlAccessor accessor, IRandomHelper random)
     {
         _accessor = accessor;
+        _random = random;
     }
     
     public async Task<Response<List<Experiment>>> GetExperiments()
@@ -53,8 +57,7 @@ public class ApiManager
                 });
 
             var maxValue = experimentsValues.Sum(_ => _.OptionValue);
-            var rnd = new Random();
-            int randomResult = rnd.Next(maxValue);
+            int randomResult = _random.Next(maxValue);
 
             ExperimentExample? result = null;
 

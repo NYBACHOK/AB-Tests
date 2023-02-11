@@ -13,7 +13,7 @@ public static class RouteExtensions
         ArgumentNullException.ThrowIfNull(app);
         
         //Get available list of experiments
-        app.MapGet("experiments/list", async (ApiManager manager) => manager.GetExperiments());
+        app.MapGet("experiments/list", async (ApiManager manager) => await manager.GetExperiments());
 
         //Do experiment based on input
         app.MapPost("experiments/submit",
