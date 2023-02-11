@@ -1,15 +1,42 @@
-var builder = WebApplication.CreateBuilder(args);
+using AbTests.Api;
+using AbTests.Api.Acessors;
+using AbTests.Api.Extensions;
+using AbTests.Api.Managers;
+using Autofac;
+using Autofac.Extensions.DependencyInjection;
+using Microsoft.AspNetCore.Identity;
 
-// Add services to the container.
+var builder = WebApplication.CreateBuilder(args);
+builder.Host.UseServiceProviderFactory(new AutofacServiceProviderFactory());
+
+#region Services
 
 builder.Services.AddControllers();
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
+#endregion Services
+
+#region Container
+
+builder.Host.ConfigureContainer<ContainerBuilder>(_ =>
+{
+    _.RegisterType<SqlAccessor>()
+        .WithParameter(new NamedParameter("connectionString", EnvironmentVariables.DbConnectionString))
+        .AsSelf();
+
+    _.RegisterType<ApiManager>().AsSelf();
+});
+
+#endregion Container
+
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
+
+#region Middleware
+
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
@@ -22,9 +49,8 @@ app.UseAuthorization();
 
 app.MapControllers();
 
-app.MapGet( "/{str}", (string str) =>
-{
-    
-});
+app.AddRoutes(); //Defined endpoints
+
+#endregion Middleware
 
 app.Run();
