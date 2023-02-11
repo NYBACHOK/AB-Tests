@@ -1,11 +1,11 @@
-﻿using AbTests.Api.Acessors.Interfaces;
+﻿using AbTests.Api.Accessors.Interfaces;
 using AbTests.Api.DO;
 using AbTests.Api.Helpers;
 using Dapper;
 using Dapper.Transaction;
 using Npgsql;
 
-namespace AbTests.Api.Acessors;
+namespace AbTests.Api.Accessors;
 
 public class SqlAccessor : ISqlAccessor
 {

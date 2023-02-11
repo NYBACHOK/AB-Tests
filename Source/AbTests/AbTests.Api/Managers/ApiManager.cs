@@ -1,5 +1,4 @@
-﻿using AbTests.Api.Acessors;
-using AbTests.Api.Acessors.Interfaces;
+﻿using AbTests.Api.Accessors.Interfaces;
 using AbTests.Api.DO;
 using AbTests.Api.Dto;
 using AbTests.Api.Enums;
@@ -12,11 +11,13 @@ public class ApiManager
 {
     private readonly ISqlAccessor _accessor;
     private readonly IRandomHelper _random;
+    private readonly ICacheAccessor _cacheAccessor;
     
-    public ApiManager(ISqlAccessor accessor, IRandomHelper random)
+    public ApiManager(ISqlAccessor accessor, IRandomHelper random, ICacheAccessor cacheAccessor)
     {
         _accessor = accessor;
         _random = random;
+        _cacheAccessor = cacheAccessor;
     }
     
     public async Task<Response<List<Experiment>>> GetExperiments()
@@ -40,6 +41,9 @@ public class ApiManager
     {
         try
         {
+            if (_cacheAccessor.TryGetExperiment(deviceToken, experimentName, out ExperimentResultDto? resultDto))
+                return FormatResponse(resultDto)!;
+
             var client = await _accessor.GetClient(deviceToken)
                          ?? await _accessor.AddClient(deviceToken)
                          ?? throw new NpgsqlException();
@@ -50,11 +54,18 @@ public class ApiManager
                 .OrderBy(_ => _.OptionName).ToList();
 
             if (experimentResult is not null)
-                return FormatResponse(new ExperimentResultDto
+            {
+                resultDto = new ExperimentResultDto
                 {
                     Value = experimentsValues.Single(_ => _.ExampleId == experimentResult.ExampleId).OptionName,
                     Key = experimentDefinition.ExpName
-                });
+                };
+
+                _cacheAccessor.AddToCache(resultDto, deviceToken, experimentName);
+                
+                return FormatResponse(resultDto);
+            }
+                
 
             var maxValue = experimentsValues.Sum(_ => _.OptionValue);
             int randomResult = _random.Next(maxValue);
@@ -79,11 +90,15 @@ public class ApiManager
             if (!saveResult)
                 return FormatResponse<ExperimentResultDto>(ResponseCode.SqlException);
 
-            return FormatResponse(new ExperimentResultDto
+            resultDto = new ExperimentResultDto
             {
                 Value = result.OptionName,
                 Key = experimentDefinition.ExpName
-            });
+            };
+
+            _cacheAccessor.AddToCache(resultDto, deviceToken, experimentName);
+            
+            return FormatResponse(resultDto);
         }
         catch (NpgsqlException)
         {

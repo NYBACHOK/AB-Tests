@@ -1,5 +1,6 @@
 using AbTests.Api;
-using AbTests.Api.Acessors;
+using AbTests.Api.Accessors;
+using AbTests.Api.Accessors.Interfaces;
 using AbTests.Api.Extensions;
 using AbTests.Api.Helpers;
 using AbTests.Api.Managers;
@@ -17,6 +18,8 @@ builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
+builder.Services.AddMemoryCache();
+
 #endregion Services
 
 #region Container
@@ -31,6 +34,10 @@ builder.Host.ConfigureContainer<ContainerBuilder>(_ =>
     _.RegisterType<ApiManager>().AsSelf();
 
     _.RegisterType<RandomHelper>()
+        .AsSelf()
+        .AsImplementedInterfaces();
+
+    _.RegisterType<CacheAccessor>()
         .AsSelf()
         .AsImplementedInterfaces();
 });

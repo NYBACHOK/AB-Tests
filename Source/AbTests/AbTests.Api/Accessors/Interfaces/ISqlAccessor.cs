@@ -1,6 +1,6 @@
 ﻿using AbTests.Api.DO;
 
-namespace AbTests.Api.Acessors.Interfaces;
+namespace AbTests.Api.Accessors.Interfaces;
 
 public interface ISqlAccessor
 {
