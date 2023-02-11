@@ -16,7 +16,11 @@ public static class RouteExtensions
         app.MapPost("/{deviceToken}",
             async (Guid deviceToken, ApiManager manager) => await manager.AddClient(deviceToken));
 
-        app.MapGet("experiment", async (Guid deviceToken, ApiManager manager) => await manager.ButtonExperiment(deviceToken));
+        app.MapGet("experiment/button",
+            async (Guid deviceToken, ApiManager manager) => await manager.ButtonExperiment(deviceToken));
+
+        app.MapGet("experiment/price", async (Guid deviceToken, ApiManager manager) =>
+            await manager.ColorExperiment(deviceToken));
 
         return app;
     }

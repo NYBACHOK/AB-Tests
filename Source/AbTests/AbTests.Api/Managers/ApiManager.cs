@@ -1,4 +1,5 @@
 ﻿using AbTests.Api.Acessors;
+using AbTests.Api.DO;
 using AbTests.Api.Dto;
 using AbTests.Api.Enums;
 using Npgsql;
@@ -65,6 +66,51 @@ public class ApiManager
                 return FormatResponse<ExperimentResultDto>(ResponseCode.SqlException); 
 
             return FormatResponse(new ExperimentResultDto { Key = "button_color", Value = value.OptionName });
+        }
+        catch (NpgsqlException)
+        {
+            return FormatResponse<ExperimentResultDto>(ResponseCode.SqlException);
+        }
+        catch (Exception)
+        {
+            return FormatResponse<ExperimentResultDto>(ResponseCode.UnknownError);
+        }
+    }
+
+    public async Task<Response<ExperimentResultDto>> ColorExperiment(Guid deviceToken)
+    {
+        try
+        {
+            var client = await _accessor.GetClient(deviceToken) 
+                         ?? await _accessor.AddClient(deviceToken) 
+                         ?? throw new NpgsqlException();
+
+            var rnd = new Random();
+            int randomResult = rnd.Next(100);
+
+            //hard code for color
+            var experimentValues = await _accessor.GetExperimentValues(experimentId: 2);
+            
+            var experimentResult = await _accessor.GetClientExperiment(client.ClientId, 2);
+            if(experimentResult is not null)
+                return FormatResponse(new ExperimentResultDto { Key = "price", Value = experimentValues
+                    .Single(_=> _.ExampleId == experimentResult.ExampleId).OptionName });
+
+            ExperimentExample? value = null;
+            if (Enumerable.Range(0, 75).Contains(randomResult))
+                value = experimentValues.Single(_ => _.OptionName == "10");
+            else if(Enumerable.Range(76, 10).Contains(randomResult))
+                value = experimentValues.Single(_ => _.OptionName == "20");
+            else if (Enumerable.Range(87, 5).Contains(randomResult))
+                value = experimentValues.Single(_ => _.OptionName == "50");
+            else
+                value = experimentValues.Single(_ => _.OptionName == "5");
+
+            var saveResult = await _accessor.SaveExperimentResult(client.ClientId, value.ExampleId);
+            if(!saveResult)
+                return FormatResponse<ExperimentResultDto>(ResponseCode.SqlException); 
+
+            return FormatResponse(new ExperimentResultDto { Key = "price", Value = value.OptionName });
         }
         catch (NpgsqlException)
         {
