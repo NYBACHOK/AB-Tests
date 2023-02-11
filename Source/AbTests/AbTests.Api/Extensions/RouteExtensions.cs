@@ -12,16 +12,14 @@ public static class RouteExtensions
     {
         ArgumentNullException.ThrowIfNull(app);
         
-        //create client manually
-        app.MapPost("/{deviceToken}",
-            async (Guid deviceToken, ApiManager manager) => await manager.AddClient(deviceToken));
+        //Get available list of experiments
+        app.MapGet("experiments/list", async (ApiManager manager) => manager.GetExperiments());
 
-        app.MapGet("experiment/button",
-            async (Guid deviceToken, ApiManager manager) => await manager.ButtonExperiment(deviceToken));
-
-        app.MapGet("experiment/price", async (Guid deviceToken, ApiManager manager) =>
-            await manager.ColorExperiment(deviceToken));
-
+        //Do experiment based on input
+        app.MapPost("experiments/submit",
+            async (Guid deviceToken, string experimentName, ApiManager manager) =>
+                await manager.GetExperimentResult(deviceToken, experimentName));
+        
         return app;
     }
 }

@@ -14,113 +14,87 @@ public class ApiManager
     {
         _accessor = accessor;
     }
-
-    public async Task<Response<bool>> AddClient(Guid deviceToken)
+    
+    public async Task<Response<List<Experiment>>> GetExperiments()
     {
         try
         {
-            var result = await _accessor.AddClient(deviceToken);
-            return FormatResponse(result is not null);
+            var result = await _accessor.GetExperiments();
+            return FormatResponse(result);
         }
         catch (NpgsqlException)
         {
-            return FormatResponse<bool>(ResponseCode.SqlException);
+            return FormatResponse<List<Experiment>>(ResponseCode.SqlException);
         }
         catch (Exception)
         {
-            return FormatResponse<bool>(ResponseCode.UnknownError);
+            return FormatResponse<List<Experiment>>(ResponseCode.UnknownError);
         }
     }
 
-    public async Task<Response<ExperimentResultDto>> ButtonExperiment(Guid deviceToken)
+    public async Task<Response<ExperimentResultDto>> GetExperimentResult(Guid deviceToken, string experimentName)
     {
         try
         {
-            var client = await _accessor.GetClient(deviceToken) 
-                         ?? await _accessor.AddClient(deviceToken) 
+            var client = await _accessor.GetClient(deviceToken)
+                         ?? await _accessor.AddClient(deviceToken)
                          ?? throw new NpgsqlException();
 
-            var rnd = new Random();
-            int randomResult = rnd.Next(3);
+            var experimentDefinition = (await _accessor.GetExperiments()).Single(_ => _.ExpName == experimentName);
+            var experimentResult = await _accessor.GetClientExperiment(client.ClientId, experimentDefinition.ExpId);
+            var experimentsValues = (await _accessor.GetExperimentValues(experimentDefinition.ExpId))
+                .OrderBy(_ => _.OptionName).ToList();
 
-            //hard code for button_experiment
-            var experimentValues = await _accessor.GetExperimentValues(experimentId: 1);
-            experimentValues = experimentValues.OrderBy(_ => _.OptionName).ToList();
-            
-            
-            var experimentResult = await _accessor.GetClientExperiment(client.ClientId, 1);
-            if(experimentResult is not null)
-                return FormatResponse(new ExperimentResultDto { Key = "button_color", Value = experimentValues
-                    .Single(_=> _.ExampleId == experimentResult.ExampleId).OptionName }); 
-            
-            var value = randomResult switch
+            if (experimentResult is not null)
+                return FormatResponse(new ExperimentResultDto
+                {
+                    Value = experimentsValues.Single(_ => _.ExampleId == experimentResult.ExampleId).OptionName,
+                    Key = experimentDefinition.ExpName
+                });
+
+            var maxValue = experimentsValues.Sum(_ => _.OptionValue);
+            var rnd = new Random();
+            int randomResult = rnd.Next(maxValue);
+
+            ExperimentExample? result = null;
+
+            int page = 0;
+            foreach (var value in experimentsValues)
             {
-                0 => experimentValues[0],
-                1 => experimentValues[1],
-                2 => experimentValues[2],
-                _=> throw new InvalidOperationException()
-            };
+                if (Enumerable.Range(page, value.OptionValue).Contains(randomResult))
+                {
+                    result = value;
+                    break;
+                }
 
-            var saveResult = await _accessor.SaveExperimentResult(client.ClientId, value.ExampleId);
-            if(!saveResult)
-                return FormatResponse<ExperimentResultDto>(ResponseCode.SqlException); 
+                page += value.OptionValue;
+            }
 
-            return FormatResponse(new ExperimentResultDto { Key = "button_color", Value = value.OptionName });
+            ArgumentNullException.ThrowIfNull(result);
+
+            var saveResult = await _accessor.SaveExperimentResult(client.ClientId, result.ExampleId);
+            if (!saveResult)
+                return FormatResponse<ExperimentResultDto>(ResponseCode.SqlException);
+
+            return FormatResponse(new ExperimentResultDto
+            {
+                Value = result.OptionName,
+                Key = experimentDefinition.ExpName
+            });
         }
         catch (NpgsqlException)
         {
             return FormatResponse<ExperimentResultDto>(ResponseCode.SqlException);
         }
-        catch (Exception)
+        catch (ArgumentNullException)
         {
-            return FormatResponse<ExperimentResultDto>(ResponseCode.UnknownError);
-        }
-    }
-
-    public async Task<Response<ExperimentResultDto>> ColorExperiment(Guid deviceToken)
-    {
-        try
-        {
-            var client = await _accessor.GetClient(deviceToken) 
-                         ?? await _accessor.AddClient(deviceToken) 
-                         ?? throw new NpgsqlException();
-
-            var rnd = new Random();
-            int randomResult = rnd.Next(100);
-
-            //hard code for color
-            var experimentValues = await _accessor.GetExperimentValues(experimentId: 2);
-            
-            var experimentResult = await _accessor.GetClientExperiment(client.ClientId, 2);
-            if(experimentResult is not null)
-                return FormatResponse(new ExperimentResultDto { Key = "price", Value = experimentValues
-                    .Single(_=> _.ExampleId == experimentResult.ExampleId).OptionName });
-
-            ExperimentExample? value = null;
-            if (Enumerable.Range(0, 75).Contains(randomResult))
-                value = experimentValues.Single(_ => _.OptionName == "10");
-            else if(Enumerable.Range(76, 10).Contains(randomResult))
-                value = experimentValues.Single(_ => _.OptionName == "20");
-            else if (Enumerable.Range(87, 5).Contains(randomResult))
-                value = experimentValues.Single(_ => _.OptionName == "50");
-            else
-                value = experimentValues.Single(_ => _.OptionName == "5");
-
-            var saveResult = await _accessor.SaveExperimentResult(client.ClientId, value.ExampleId);
-            if(!saveResult)
-                return FormatResponse<ExperimentResultDto>(ResponseCode.SqlException); 
-
-            return FormatResponse(new ExperimentResultDto { Key = "price", Value = value.OptionName });
-        }
-        catch (NpgsqlException)
-        {
-            return FormatResponse<ExperimentResultDto>(ResponseCode.SqlException);
+            return FormatResponse<ExperimentResultDto>(ResponseCode.ErrorInExperiment);
         }
         catch (Exception)
         {
             return FormatResponse<ExperimentResultDto>(ResponseCode.UnknownError);
         }
-    }
+    } 
 
     private Response<T> FormatResponse<T>(T result)
     {
