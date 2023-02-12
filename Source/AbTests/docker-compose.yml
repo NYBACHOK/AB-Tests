@@ -1,0 +1,57 @@
+version: '3.4'
+
+networks:
+  api-dev:
+    driver: bridge
+
+services:
+  abtests.api:
+    image: ${DOCKER_REGISTRY-}abtestsapi
+    build:
+      context: .
+      dockerfile: AbTests.Api/Dockerfile
+    environment:
+      DB_CONNECTIONSTRING: "host=postgresql_db;Port=5433;Database=postgres;username=user;Password=123;"
+      JWT_KEY : "wwgamyblcvkusbhvuzbxrotjzfhascngbznrzpyzhfyksqapnpxzmwtpqohpqtfbjzzgscdvvrtqhidfkkcjpymeweverzpadmzihhfqzosacrjswpdffezqycfhujca"
+    ports:
+        - "8003:80"
+        - "8004:443"
+    networks:
+        - api-dev
+    depends_on:
+      postgresql_db:
+        condition: service_healthy
+    healthcheck:
+        test: curl -sS http://127.0.0.1/health || echo 1
+        interval: 10s
+        timeout: 20s
+        retries: 4    
+  
+  postgresql_db:
+    image: postgres
+    container_name: postgresql_db
+    environment:
+      - POSTGRES_USER=user
+      - POSTGRES_PASSWORD=123
+      - POSTGRES_DB=postgres
+    ports:
+      - "5433:5432"
+    networks:
+      - api-dev
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-user} -d ${POSTGRES_DB:-postgres}" ]
+      interval: 2s
+      timeout: 5s
+      retries: 10
+  
+  postgres_flyway:
+    image: flyway/flyway
+    container_name: "Postgres_Flyway"
+    networks:
+      - api-dev
+    command: -url=jdbc:postgresql://postgresql_db/${POSTGRES_DB:-postgres} -user=${POSTGRES_USER:-user} -password=${POSTGRES_PASSWORD:-123} -connectRetries=60 migrate
+    volumes:
+      - ../../Migrations:/flyway/sql
+    depends_on:
+      postgresql_db:
+        condition: service_healthy 
