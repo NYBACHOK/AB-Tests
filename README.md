@@ -7,6 +7,7 @@
 2. Migration done with Flyway docker container in compose
 3. Due amount of routes I used minimal api(without any controller)
 4. Experiments adding in migration script and api will work for any other tests
+5. Time ~8hours
 
 **Database diagram**
 
