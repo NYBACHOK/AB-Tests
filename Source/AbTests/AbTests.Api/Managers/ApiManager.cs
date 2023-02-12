@@ -41,6 +41,9 @@ public class ApiManager
     {
         try
         {
+            if (Guid.Empty == deviceToken || string.IsNullOrEmpty(experimentName))
+                return FormatResponse<ExperimentResultDto>(ResponseCode.InvalidModel);
+            
             if (_cacheAccessor.TryGetExperiment(deviceToken, experimentName, out ExperimentResultDto? resultDto))
                 return FormatResponse(resultDto)!;
 
@@ -143,9 +146,6 @@ public class ApiManager
 
     private Response<T> FormatResponse<T>(ResponseCode code)
     {
-        return code switch
-        {
-            _ => new Response<T>{ Error = code}
-        };
+        return new Response<T> { Error = code };
     }
 }

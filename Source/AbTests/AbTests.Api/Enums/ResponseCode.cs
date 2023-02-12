@@ -5,5 +5,6 @@ public enum ResponseCode
     NoError = 0,
     UnknownError = 1,
     SqlException = 2,
-    ErrorInExperiment = 3
+    ErrorInExperiment = 3,
+    InvalidModel = 4
 }
