@@ -116,4 +116,22 @@ public class SqlAccessor : ISqlAccessor
             await transaction.CommitAsync();
         }
     }
+
+    public async Task<List<Statistic>> GetStatistic()
+    {
+        await using var connection = ConnectionHelper.StartConnection(_connectionString);
+
+        string query = @"SELECT e2.amount as devicesCount, ex.expname as experimentName , e2.optionname
+            FROM clientexperimentresult cr
+                    JOIN experiments ex ON ex.expid = (SELECT ee.expid FROM experimentexamples ee WHERE ee.exampleid = cr.exampleid)
+                JOIN (SELECT ee1.optionname, count(c.exampleid) as amount, e.expname FROM experimentexamples ee1
+                JOIN clientexperimentresult c on ee1.exampleid = c.exampleid
+                JOIN experiments e on e.expid = ee1.expid
+            GROUP BY  ee1.optionname, e.expname) as e2 ON e2.expname = ex.expname 
+        GROUP BY ex.expname, e2.optionname, e2.amount;";
+
+        var result = await connection.QueryAsync<Statistic>(query);
+
+        return result.AsList();
+    } 
 }

@@ -15,4 +15,6 @@ public interface ISqlAccessor
     Task<ExperimentResult?> GetClientExperiment(int clientId, int experimentId);
 
     Task<bool> SaveExperimentResult(int clientId, int exampleId);
+
+    Task<List<Statistic>> GetStatistic();
 }

@@ -10,7 +10,7 @@ namespace AbTests.Api.Managers;
 public class ApiManager
 {
     private readonly ISqlAccessor _accessor;
-    private readonly IRandomHelper _random;
+    private readonly IRandomHelper _random; //Added for UT Mock 
     private readonly ICacheAccessor _cacheAccessor;
     
     public ApiManager(ISqlAccessor accessor, IRandomHelper random, ICacheAccessor cacheAccessor)
@@ -112,7 +112,25 @@ public class ApiManager
         {
             return FormatResponse<ExperimentResultDto>(ResponseCode.UnknownError);
         }
-    } 
+    }
+
+    public async Task<Response<List<Statistic>>> GetStatistic()
+    {
+        try
+        {
+            var result = await _accessor.GetStatistic();
+            
+            return FormatResponse(result);
+        }
+        catch (NpgsqlException)
+        {
+            return FormatResponse<List<Statistic>>(ResponseCode.SqlException);
+        }
+        catch (Exception)
+        {
+            return FormatResponse<List<Statistic>>(ResponseCode.UnknownError);
+        }
+    }
 
     private Response<T> FormatResponse<T>(T result)
     {
